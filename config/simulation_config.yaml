@@ -1,0 +1,100 @@
+# Grid Configuration
+grid:
+  main_generation: 2000      # Main grid capacity (kW)
+  frequency: 50              # Hz
+  inertia: 8                 # seconds
+
+# Renewable Generation Profiles
+renewable:
+  solar_capacity: 500        # Peak solar capacity (kW)
+  wind_capacity: 0           # Peak wind capacity (kW) - optional
+  solar_uncertainty: 0.15    # ±15% stochastic variation
+  wind_uncertainty: 0.20     # ±20% stochastic variation
+
+# Energy Storage (Battery)
+storage:
+  capacity: 200              # Total capacity (kWh)
+  efficiency: 0.92           # 92% round-trip efficiency
+  max_charge_rate: 100       # Max charge (kW)
+  max_discharge_rate: 100    # Max discharge (kW)
+  soc_min: 0.20              # Minimum SOC (20%)
+  soc_max: 0.95              # Maximum SOC (95%)
+  degradation_rate: 0.0002   # Per cycle degradation
+
+# Load Configuration
+loads:
+  hospital:
+    name: "Hospital"
+    demand_kw: 300           # Peak demand (kW)
+    priority: 4              # Highest priority
+    flexibility: 0.05        # 5% flexible
+    min_load: 0.80           # Minimum 80% must be supplied
+    demand_pattern: "constant"  # Demand profile type
+    
+  commercial:
+    name: "Commercial Buildings"
+    demand_kw: 600
+    priority: 3
+    flexibility: 0.15
+    min_load: 0.75
+    demand_pattern: "business_hours"
+    
+  school:
+    name: "School"
+    demand_kw: 200
+    priority: 2
+    flexibility: 0.20
+    min_load: 0.70
+    demand_pattern: "school_hours"
+    
+  residential:
+    name: "Residential"
+    demand_kw: 2000
+    priority: 1
+    flexibility: 0.30
+    min_load: 0.60
+    demand_pattern: "residential"
+
+# Pricing Configuration
+pricing:
+  base_price: 100            # Base price ($/MWh)
+  mechanism: "sdr_based"     # Pricing mechanism
+  
+  # SDR thresholds
+  sdr_thresholds:
+    high: 1.5                # SDR > 1.5: surplus
+    normal_high: 0.9         # 0.9-1.5: normal
+    normal_low: 0.5          # 0.5-0.9: shortage
+    critical: 0.5            # SDR < 0.5: critical
+  
+  # Price multipliers
+  price_multipliers:
+    excess: 0.5              # 50% discount (SDR > 1.5)
+    shortage: 2.0            # 2× multiplier (0.5-0.9)
+    critical: 3.0            # 3× multiplier (SDR < 0.5)
+
+# Load Shedding Configuration
+load_shedding:
+  enabled: true
+  sdr_threshold: 0.85        # Trigger shedding when SDR < 0.85
+  shedding_rate: 0.25        # Shed 25% per iteration
+  priority_reverse: true     # Shed lowest priority first
+  
+# Battery Management
+battery_management:
+  charge_threshold_sdr: 1.2  # Charge when SDR > 1.2
+  discharge_threshold_sdr: 0.85  # Discharge when SDR < 0.85
+  reserve_soc: 0.30          # Keep 30% reserve for emergencies
+
+# Simulation Parameters
+simulation:
+  time_horizon: 24           # Total simulation time (hours)
+  timestep: 1                # Time resolution (hours)
+  logging_level: "INFO"      # DEBUG, INFO, WARNING, ERROR
+
+# Features
+features:
+  demand_response: true      # Enable DR
+  renewable_uncertainty: true  # Enable stochastic variation
+  battery_degradation: true  # Enable battery aging
+  p2p_trading: true          # Enable P2P trading
