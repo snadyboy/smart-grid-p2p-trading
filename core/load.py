@@ -35,30 +35,52 @@ class Load:
         self.flexibility = flexibility
         self.priority = PRIORITY_LEVELS[load_type]
         
+        # Custom 24-hour demand profile (absolute kW values).
+        # When set, overrides the default LOAD_PROFILES factor-based calculation.
+        self.custom_profile: Optional[List[float]] = None
+        
         # Current state
         self.current_demand_kw = 0.0
         self.allocated_kw = 0.0
         self.shed_kw = 0.0
         self.status = LoadStatus.ACTIVE
+        self.hourly_cost = 0.0
         
         # Cost tracking
         self.cumulative_cost = 0.0
         self.cumulative_energy_kwh = 0.0
         self.shedding_events = 0
         
+    def set_custom_profile(self, profile: List[float]):
+        """
+        Set a custom 24-hour absolute demand profile (kW per hour).
+        
+        Args:
+            profile: List of 24 demand values in kW (one per hour).
+        """
+        if len(profile) != 24:
+            raise ValueError("Custom profile must have exactly 24 values.")
+        self.custom_profile = list(profile)
+
     def calculate_demand(self, hour: int, stochastic: bool = True) -> float:
         """
         Calculate demand for given hour.
         
+        If a custom_profile has been set, it is used directly (absolute kW).
+        Otherwise the default LOAD_PROFILES factor is applied to peak_demand_kw.
+        
         Args:
             hour: Hour of day (0-23)
-            stochastic: Add ±10% random variation
+            stochastic: Add ±5% random variation
             
         Returns:
             Demand in kW
         """
-        profile_factor = LOAD_PROFILES[self.load_type][hour % 24]
-        base_demand = self.peak_demand_kw * profile_factor
+        if self.custom_profile is not None:
+            base_demand = self.custom_profile[hour % 24]
+        else:
+            profile_factor = LOAD_PROFILES[self.load_type][hour % 24]
+            base_demand = self.peak_demand_kw * profile_factor
         
         if stochastic:
             variation = np.random.normal(0, 0.05)  # ±5% std dev
@@ -90,19 +112,24 @@ class Load:
         
         return self.allocated_kw
     
-    def update_cost(self, price_per_mwh: float):
+    def update_cost(self, price_per_mwh: float) -> float:
         """
-        Update cumulative cost based on allocated power.
+        Update cumulative cost based on allocated power (1-hour timestep).
         
         Args:
-            price_per_mwh: Current price in $/MWh
+            price_per_mwh: Current price in RS/MWh
+            
+        Returns:
+            Hourly cost in RS
         """
-        # Energy in MWh for 1-minute timestep
-        energy_mwh = (self.allocated_kw / 1000.0) / 60.0
+        # Timestep = 1 hour: energy (MWh) = allocated_kw × 1 h ÷ 1000
+        energy_mwh = (self.allocated_kw * 1.0) / 1000.0
         cost = energy_mwh * price_per_mwh
         
+        self.hourly_cost = cost
         self.cumulative_cost += cost
-        self.cumulative_energy_kwh += self.allocated_kw / 60.0
+        self.cumulative_energy_kwh += self.allocated_kw * 1.0  # kW × 1 h = kWh
+        return cost
     
     def handle_shedding(self, shedding_rate: float) -> float:
         """Handle load shedding with flexibility constraints."""
@@ -118,7 +145,7 @@ class Hospital(Load):
     def __init__(self, demand_kw: float = 300.0):
         super().__init__(LoadType.HOSPITAL, demand_kw, flexibility=0.05)
         self.min_load = 0.80  # Must supply 80% minimum
-        logger.info("🏥 Hospital load initialized: 300 kW, Priority 4")
+        logger.info("🏥 Hospital load initialized: 300 kW, Priority 1 (highest)")
 
 class Commercial(Load):
     """Commercial load - Business hours pattern."""
@@ -126,7 +153,7 @@ class Commercial(Load):
     def __init__(self, demand_kw: float = 600.0):
         super().__init__(LoadType.COMMERCIAL, demand_kw, flexibility=0.15)
         self.min_load = 0.75
-        logger.info("🏢 Commercial load initialized: 600 kW, Priority 3")
+        logger.info("🏢 Commercial load initialized: 600 kW, Priority 2")
 
 class School(Load):
     """School load - School hours pattern."""
@@ -134,7 +161,7 @@ class School(Load):
     def __init__(self, demand_kw: float = 200.0):
         super().__init__(LoadType.SCHOOL, demand_kw, flexibility=0.20)
         self.min_load = 0.70
-        logger.info("🏫 School load initialized: 200 kW, Priority 2")
+        logger.info("🏫 School load initialized: 200 kW, Priority 3")
 
 class Residential(Load):
     """Residential load - Evening/morning peaks."""
@@ -142,4 +169,28 @@ class Residential(Load):
     def __init__(self, demand_kw: float = 2000.0):
         super().__init__(LoadType.RESIDENTIAL, demand_kw, flexibility=0.30)
         self.min_load = 0.60
-        logger.info("🏠 Residential load initialized: 2000 kW, Priority 1")
+        logger.info("🏠 Residential load initialized: 2000 kW, Priority 4")
+
+class Home1(Load):
+    """Home 1 - Residential household load."""
+    
+    def __init__(self, demand_kw: float = 500.0):
+        super().__init__(LoadType.HOME1, demand_kw, flexibility=0.30)
+        self.min_load = 0.60
+        logger.info(f"🏠 Home 1 load initialized: {demand_kw} kW, Priority 4")
+
+class Home2(Load):
+    """Home 2 - Residential household load."""
+    
+    def __init__(self, demand_kw: float = 500.0):
+        super().__init__(LoadType.HOME2, demand_kw, flexibility=0.30)
+        self.min_load = 0.60
+        logger.info(f"🏠 Home 2 load initialized: {demand_kw} kW, Priority 5")
+
+class Home3(Load):
+    """Home 3 - Residential household load."""
+    
+    def __init__(self, demand_kw: float = 500.0):
+        super().__init__(LoadType.HOME3, demand_kw, flexibility=0.30)
+        self.min_load = 0.60
+        logger.info(f"🏠 Home 3 load initialized: {demand_kw} kW, Priority 6")
