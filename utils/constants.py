@@ -18,6 +18,9 @@ class LoadType(Enum):
     COMMERCIAL = "commercial"
     SCHOOL = "school"
     RESIDENTIAL = "residential"
+    HOME1 = "home1"
+    HOME2 = "home2"
+    HOME3 = "home3"
 
 class LoadStatus(Enum):
     """Load operational status."""
@@ -44,10 +47,13 @@ class RenewableType(Enum):
 # ============================================================================
 
 PRIORITY_LEVELS = {
-    LoadType.HOSPITAL: 4,      # Highest (cannot be shed)
-    LoadType.COMMERCIAL: 3,
-    LoadType.SCHOOL: 2,
-    LoadType.RESIDENTIAL: 1,   # Lowest (first to shed)
+    LoadType.HOSPITAL: 1,      # Highest (served first)
+    LoadType.COMMERCIAL: 2,
+    LoadType.SCHOOL: 3,
+    LoadType.RESIDENTIAL: 4,
+    LoadType.HOME1: 4,
+    LoadType.HOME2: 5,
+    LoadType.HOME3: 6,         # Lowest (served last)
 }
 
 # ============================================================================
@@ -74,6 +80,21 @@ LOAD_PROFILES = {
         0.40, 0.35, 0.32, 0.30, 0.32, 0.38, 0.50, 0.55, 0.48, 0.45,
         0.50, 0.55, 0.58, 0.60, 0.62, 0.60, 0.55, 0.65, 0.80, 0.90,
         0.95, 0.98, 0.85, 0.60
+    ],
+    LoadType.HOME1: [
+        0.40, 0.35, 0.32, 0.30, 0.32, 0.38, 0.50, 0.55, 0.48, 0.45,
+        0.50, 0.55, 0.58, 0.60, 0.62, 0.60, 0.55, 0.65, 0.80, 0.90,
+        0.95, 0.98, 0.85, 0.60
+    ],
+    LoadType.HOME2: [
+        0.35, 0.30, 0.28, 0.28, 0.30, 0.35, 0.45, 0.52, 0.50, 0.48,
+        0.52, 0.58, 0.60, 0.62, 0.65, 0.63, 0.58, 0.68, 0.82, 0.92,
+        0.96, 0.99, 0.88, 0.65
+    ],
+    LoadType.HOME3: [
+        0.42, 0.38, 0.34, 0.32, 0.34, 0.40, 0.52, 0.58, 0.46, 0.44,
+        0.48, 0.53, 0.56, 0.58, 0.60, 0.58, 0.53, 0.62, 0.78, 0.88,
+        0.93, 0.96, 0.82, 0.58
     ],
 }
 

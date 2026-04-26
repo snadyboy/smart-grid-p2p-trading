@@ -5,7 +5,7 @@ Based on Zhou et al. - P2P energy trading with decentralized control.
 
 from typing import Dict, List, Tuple
 from utils.constants import (
-    LoadType, PRIORITY_LEVELS,
+    LoadType,
     SDR_THRESHOLD_HIGH, SDR_THRESHOLD_NORMAL_HIGH,
     SHEDDING_THRESHOLD_SDR, SHEDDING_RATE
 )
@@ -26,7 +26,8 @@ class CentralController:
         """
         Allocate energy based on priority.
         
-        Priority Order: Hospital (4) → Commercial (3) → School (2) → Residential (1)
+        Loads are served in ascending priority order (priority 1 = highest).
+        Each load's priority is read from load.priority.
         
         Args:
             total_generation_kw: Available generation
@@ -38,29 +39,26 @@ class CentralController:
         allocation = {}
         remaining_generation = total_generation_kw
         
-        # Sort by priority (highest first)
+        # Sort by priority ascending: lowest number = highest priority = served first
         sorted_loads = sorted(loads.items(), 
-                            key=lambda x: PRIORITY_LEVELS[x[0]], 
-                            reverse=True)
+                            key=lambda x: x[1].priority,
+                            reverse=False)
         
         for load_type, load in sorted_loads:
             demand = load.current_demand_kw
             allocated = min(remaining_generation, demand)
             allocation[load_type] = allocated
-            remaining_generation -= allocated
-            
-            if remaining_generation <= 0:
-                break
+            remaining_generation = max(0.0, remaining_generation - allocated)
         
-        # Ensure all loads have an allocation
-        for load_type, load in loads.items():
+        # Ensure all loads have an allocation entry
+        for load_type in loads:
             if load_type not in allocation:
                 allocation[load_type] = 0.0
         
-        logger.info(f"⚡ Allocation: Hospital={allocation[LoadType.HOSPITAL]:.0f}kW, "
-                   f"Commercial={allocation[LoadType.COMMERCIAL]:.0f}kW, "
-                   f"School={allocation[LoadType.SCHOOL]:.0f}kW, "
-                   f"Residential={allocation[LoadType.RESIDENTIAL]:.0f}kW")
+        alloc_str = ", ".join(
+            f"{lt.value}={v:.0f}kW" for lt, v in allocation.items()
+        )
+        logger.info(f"⚡ Allocation: {alloc_str}")
         
         return allocation
     
@@ -83,10 +81,10 @@ class CentralController:
             # No shedding needed
             return {lt: 0.0 for lt in loads.keys()}
         
-        # Shed in REVERSE priority order (lowest priority first)
+        # Shed in REVERSE priority order (lowest priority = highest number first)
         sorted_loads = sorted(loads.items(),
-                            key=lambda x: PRIORITY_LEVELS[x[0]],
-                            reverse=False)
+                            key=lambda x: x[1].priority,
+                            reverse=True)
         
         for load_type, load in sorted_loads:
             if sdr >= SHEDDING_THRESHOLD_SDR:
